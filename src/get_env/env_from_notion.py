@@ -19,6 +19,22 @@ def get_user_env_vars():
                .get('text', {})
                .get('content', 'MISSING_USER_ID')  # Fallback value
         )
+        
+        if not user_id:
+            user_id = (
+                page.get('properties', {})
+                   .get('USER_ID', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            )
+        
+        if not user_id:
+            print(f"⛔ MALFORMED ENTRY: {page['id']}")
+            print("Required properties missing:")
+            print(json.dumps(page['properties'], indent=2))
+            raise SystemExit("Fix Notion database configuration")
+            
         # 假设数据库中有如下属性
         user_env_vars[user_id] = {
             "USER_NAME": (
