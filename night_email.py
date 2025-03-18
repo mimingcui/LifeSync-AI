@@ -21,11 +21,23 @@ for user_id in user_data:
     user_name = user_data[user_id]["USER_NAME"]
     user_career = user_data[user_id]["USER_CAREER"]
     schedule_prompt = user_data[user_id]["SCHEDULE_PROMPT"]
-    time_zone_offset = int(user_data[user_id]["TIME_ZONE"])
 
-    # Convert UTC time to user's local time
-    local_time = utc_now.astimezone(pytz.timezone(f'Etc/GMT{"+" if time_zone_offset < 0 else "-"}{abs(time_zone_offset)}'))
-    print("local_time: \n" + str(local_time))
+    # Safely get TIME_ZONE
+    time_zone_str = user_data[user_id]["TIME_ZONE"].strip()
+
+    # Validate format (e.g., "-4", "+2", "0")
+    if not re.match(r"^[+-]?\d+$", time_zone_str):
+        print(f"⚠️ Invalid TIME_ZONE '{time_zone_str}'. Using default: 0.")
+        time_zone_offset = 0
+    else:
+        time_zone_offset = int(time_zone_str)
+
+    # Convert UTC to local time
+    local_time = utc_now.astimezone(
+        pytz.timezone(f'Etc/GMT{"+" if time_zone_offset < 0 else "-"}{abs(time_zone_offset)}')
+    )
+    print(f"Local time for {user_id}: {local_time}")
+
     custom_date = local_time.date()
 
     tasks = fetch_tasks_from_notion(custom_date, user_notion_token, user_database_id, 
