@@ -22,11 +22,22 @@ def safe_get(dictionary, *keys, default=None):
 utc_now = datetime.now(pytz.utc)
 user_data = get_user_env_vars()
 
+def validate_user_config(user_data):
+    """Ensure at least one valid user configuration exists"""
+    valid_users = [uid for uid in user_data if uid != "MISSING_USER_ID"]
+    
+    if not valid_users:
+        raise SystemExit("⛔ CRITICAL ERROR: No valid user configurations found. "
+                         "Check Notion database for USER_ID and TIME_ZONE values.")
+validate_user_config(user_data)
+
 for user_id in user_data:
-    # Skip invalid users
     if user_id == "MISSING_USER_ID":
-        print(f"⚠️ Skipping invalid user entry: {user_id}")
-        continue
+        print(f"⛔ Configuration Error - Fix these issues:")
+        print(f"1. Ensure USER_ID is a 'Title' property in Notion")
+        print(f"2. Verify TIME_ZONE is set (e.g., '-4')")
+        print(f"3. Check integration has database access")
+        raise SystemExit("Critical configuration error - see details above")
 
     try:
         # Extract user properties with safety checks
