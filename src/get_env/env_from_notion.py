@@ -12,7 +12,13 @@ def get_user_env_vars():
 
     # 遍历每个页面（数据库中的行）
     for page in response.get("results", []):
-        user_id = page['properties']['USER_ID']['title'][0]['text']['content']
+        user_id = (
+            page.get('properties', {})
+               .get('USER_ID', {})
+               .get('title', [{}])[0]  # Default empty dict if no title
+               .get('text', {})
+               .get('content', 'MISSING_USER_ID')  # Fallback value
+        )
         # 假设数据库中有如下属性
         user_env_vars[user_id] = {
             "USER_NAME": page['properties']['USER_NAME']['rich_text'][0]['text']['content'],
