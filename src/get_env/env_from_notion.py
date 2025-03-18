@@ -21,18 +21,83 @@ def get_user_env_vars():
         )
         # 假设数据库中有如下属性
         user_env_vars[user_id] = {
-            "USER_NAME": page['properties']['USER_NAME']['rich_text'][0]['text']['content'],
-            "USER_CAREER": page['properties']['USER_CAREER']['rich_text'][0]['text']['content'],
-            "PRESENT_LOCATION": page['properties']['PRESENT_LOCATION']['rich_text'][0]['text']['content'],
-            "SCHEDULE_PROMPT": page['properties']['SCHEDULE_PROMPT']['rich_text'][0]['text']['content'],
-            # hyper parameter
-            "GPT_VERSION": page['properties']['GPT_VERSION']['rich_text'][0]['text']['content'],
-            "USER_NOTION_TOKEN": page['properties']['USER_NOTION_TOKEN']['rich_text'][0]['text']['content'],
-            "USER_DATABASE_ID": page['properties']['USER_DATABASE_ID']['rich_text'][0]['text']['content'],
-            "USER_EVENT_DATABASE_ID": page['properties']['USER_EVENT_DATABASE_ID']['rich_text'][0]['text']['content'],
-            "EMAIL_RECEIVER": page['properties']['EMAIL_RECEIVER']['rich_text'][0]['text']['content'],
-            "TIME_ZONE": page['properties']['TIME_ZONE']['rich_text'][0]['text']['content'],
-            "EMAIL_TITLE": page['properties']['EMAIL_TITLE']['rich_text'][0]['text']['content']
+            "USER_NAME": (
+                page.get('properties', {})
+                   .get('USER_NAME', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "USER_CAREER": (
+                page.get('properties', {})
+                   .get('USER_CAREER', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "PRESENT_LOCATION": (
+                page.get('properties', {})
+                   .get('PRESENT_LOCATION', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "SCHEDULE_PROMPT": (
+                page.get('properties', {})
+                   .get('SCHEDULE_PROMPT', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "GPT_VERSION": (
+                page.get('properties', {})
+                   .get('GPT_VERSION', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "USER_NOTION_TOKEN": (
+                page.get('properties', {})
+                   .get('USER_NOTION_TOKEN', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "USER_DATABASE_ID": (
+                page.get('properties', {})
+                   .get('USER_DATABASE_ID', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "USER_EVENT_DATABASE_ID": (
+                page.get('properties', {})
+                   .get('USER_EVENT_DATABASE_ID', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "EMAIL_RECEIVER": (
+                page.get('properties', {})
+                   .get('EMAIL_RECEIVER', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "TIME_ZONE": (
+                page.get('properties', {})
+                   .get('TIME_ZONE', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
+            "EMAIL_TITLE": (
+                page.get('properties', {})
+                   .get('EMAIL_TITLE', {})
+                   .get('rich_text', [{}])[0]
+                   .get('text', {})
+                   .get('content', '')
+            ),
         }
     print("Enviroments' variables fetched.")
     # print(user_env_vars)
