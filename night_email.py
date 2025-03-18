@@ -1,69 +1,142 @@
 import re 
 import pytz
+from datetime import datetime
 from src.send_email.format_email import format_email
 from src.get_notion.task_from_notion import fetch_tasks_from_notion
 from src.send_email.email_notifier import send_email
 from src.ai_operations.ai_night_advice import email_advice_with_ai
 from src.get_wheather import get_weather_forecast
-from datetime import datetime
 from src.get_env.env_from_notion import get_user_env_vars
 from src.get_notion.event_from_notion import fetch_event_from_notion
 
-# Get the current time in UTC, and then convert to the specified UTC offset
+def safe_get(dictionary, *keys, default=None):
+    """Safely retrieve nested dictionary values."""
+    for key in keys:
+        try:
+            dictionary = dictionary[key]
+        except (KeyError, TypeError):
+            return default
+    return dictionary
+
+# Get current UTC time
 utc_now = datetime.now(pytz.utc)
 user_data = get_user_env_vars()
 
 for user_id in user_data:
-    user_notion_token = user_data[user_id]["USER_NOTION_TOKEN"]
-    user_database_id = user_data[user_id]["USER_DATABASE_ID"]
-    user_event_database_id = user_data[user_id]["USER_EVENT_DATABASE_ID"]
-    gpt_version = user_data[user_id]["GPT_VERSION"]
-    present_location = user_data[user_id]["PRESENT_LOCATION"]
-    user_name = user_data[user_id]["USER_NAME"]
-    user_career = user_data[user_id]["USER_CAREER"]
-    schedule_prompt = user_data[user_id]["SCHEDULE_PROMPT"]
+    # Skip invalid users
+    if user_id == "MISSING_USER_ID":
+        print(f"⚠️ Skipping invalid user entry: {user_id}")
+        continue
 
-    # Safely get TIME_ZONE
-    time_zone_str = user_data[user_id]["TIME_ZONE"].strip()
-    if not re.match(r"^[+-]?\d+$", time_zone_str):
-        print(f"⚠️ Invalid TIME_ZONE '{time_zone_str}' for user {user_id}. Defaulting to UTC.")
-        time_zone_offset = 0
-    else:
-        time_zone_offset = int(time_zone_str)
+    try:
+        # Extract user properties with safety checks
+        user_info = user_data[user_id]
+        required_keys = [
+            "USER_NOTION_TOKEN", "USER_DATABASE_ID", "USER_EVENT_DATABASE_ID",
+            "GPT_VERSION", "PRESENT_LOCATION", "USER_NAME", "USER_CAREER",
+            "SCHEDULE_PROMPT", "TIME_ZONE", "EMAIL_RECEIVER", "EMAIL_TITLE"
+        ]
+        
+        # Validate required keys
+        for key in required_keys:
+            if key not in user_info:
+                raise ValueError(f"Missing required key: {key}")
 
-    # Convert UTC to local time
-    local_time = utc_now.astimezone(
-        pytz.timezone(f'Etc/GMT{"+" if time_zone_offset < 0 else "-"}{abs(time_zone_offset)}')
-    )
-    print(f"Local time for {user_id}: {local_time}")
-    
-    custom_date = local_time.date()
+        # Process time zone
+        time_zone_str = user_info["TIME_ZONE"].strip()
+        if not re.match(r"^[+-]?\d+$", time_zone_str):
+            print(f"⚠️ Invalid TIME_ZONE '{time_zone_str}' for {user_id}. Using UTC.")
+            time_zone_offset = 0
+        else:
+            time_zone_offset = int(time_zone_str)
 
-    tasks = fetch_tasks_from_notion(custom_date, user_notion_token, user_database_id, 
-                                  time_zone_offset, include_completed=True)  # 修正变量名
-    events = fetch_event_from_notion(custom_date, user_notion_token, user_event_database_id,
-                                   time_zone_offset, include_completed=True)  # 修正变量名
+        # Convert to local time
+        tz_str = f'Etc/GMT{"+" if time_zone_offset < 0 else "-"}{abs(time_zone_offset)}'
+        local_time = utc_now.astimezone(pytz.timezone(tz_str))
+        custom_date = local_time.date()
+        print(f"\nProcessing {user_id} ({user_info['USER_NAME']})")
+        print(f"Local time: {local_time}")
 
-    forecast_data = get_weather_forecast(present_location, time_zone_offset)
+        # Fetch data with error handling
+        try:
+            tasks = fetch_tasks_from_notion(
+                custom_date,
+                user_info["USER_NOTION_TOKEN"],
+                user_info["USER_DATABASE_ID"],
+                time_zone_offset,
+                include_completed=True
+            )
+        except Exception as e:
+            print(f"❌ Failed to fetch tasks: {str(e)}")
+            tasks = {}
 
-    data = {
-        "weather": forecast_data['tomorrow'],
-        # tasks
-        "today_tasks": tasks["today_due"],
-        "in_progress_tasks": tasks["in_progress"],
-        "future_tasks": tasks["future"],
-        "completed_tasks": tasks["completed"],
-        # events
-        "in_progress_events": events["in_progress"],
-        "tomorrow_events": events["tomorrow"],     # 注意这里改成了tomorrow
-        "upcoming_events": events["upcoming"],     # 后天及以后的事件
-        "completed_events": events["completed"]
-    }
+        try:
+            events = fetch_event_from_notion(
+                custom_date,
+                user_info["USER_NOTION_TOKEN"],
+                user_info["USER_EVENT_DATABASE_ID"],
+                time_zone_offset,
+                include_completed=True
+            )
+        except Exception as e:
+            print(f"❌ Failed to fetch events: {str(e)}")
+            events = {}
 
-    advice = email_advice_with_ai(data, gpt_version, present_location, user_career, local_time, schedule_prompt)
-    print("Final advice:\n" + advice)
+        # Get weather data safely
+        try:
+            forecast_data = get_weather_forecast(
+                user_info["PRESENT_LOCATION"],
+                time_zone_offset
+            )
+        except Exception as e:
+            print(f"❌ Weather API error: {str(e)}")
+            forecast_data = {}
 
-    tittle = "日程晚报"
-    time_of_day = "night"
-    email_body = f"{format_email(advice, user_name, tittle, time_of_day)}"
-    send_email(email_body, user_data[user_id]["EMAIL_RECEIVER"], user_data[user_id]["EMAIL_TITLE"], time_zone_offset)
+        # Prepare data with fallback values
+        data = {
+            "weather": safe_get(forecast_data, "tomorrow", default={}),
+            "today_tasks": safe_get(tasks, "today_due", default=[]),
+            "in_progress_tasks": safe_get(tasks, "in_progress", default=[]),
+            "future_tasks": safe_get(tasks, "future", default=[]),
+            "completed_tasks": safe_get(tasks, "completed", default=[]),
+            "in_progress_events": safe_get(events, "in_progress", default=[]),
+            "tomorrow_events": safe_get(events, "tomorrow", default=[]),
+            "upcoming_events": safe_get(events, "upcoming", default=[]),
+            "completed_events": safe_get(events, "completed", default=[])
+        }
+
+        # Generate AI advice
+        try:
+            advice = email_advice_with_ai(
+                data,
+                user_info["GPT_VERSION"],
+                user_info["PRESENT_LOCATION"],
+                user_info["USER_CAREER"],
+                local_time,
+                user_info["SCHEDULE_PROMPT"]
+            )
+            print("AI Advice generated successfully")
+        except Exception as e:
+            print(f"❌ AI advice generation failed: {str(e)}")
+            advice = "No advice generated due to system error"
+
+        # Prepare and send email
+        email_body = format_email(
+            advice,
+            user_info["USER_NAME"],
+            "日程晚报",
+            "night"
+        )
+        send_email(
+            email_body,
+            user_info["EMAIL_RECEIVER"],
+            user_info["EMAIL_TITLE"],
+            time_zone_offset
+        )
+        print(f"✅ Email sent to {user_info['EMAIL_RECEIVER']}")
+
+    except Exception as e:
+        print(f"🔥 Critical error processing {user_id}: {str(e)}")
+        continue
+
+print("\nNightly email processing completed")
