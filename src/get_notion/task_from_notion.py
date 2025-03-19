@@ -18,6 +18,10 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
     """
     notion = Client(auth=USER_NOTION_TOKEN)
     print("\nFetching tasks from Notion...\n")
+
+    db = notion.databases.retrieve(USER_DATABASE_ID)
+    print("Task Database Properties:", json.dumps(db['properties'], indent=2))
+
     
     try:
         # 创建时区对象
@@ -49,9 +53,6 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
             }
         )
         
-        db = notion.databases.retrieve(USER_DATABASE_ID)
-        print("Task Database Properties:", json.dumps(db['properties'], indent=2))
-
         # 初始化任务列表
         tasks = {
             "today_due": [],      # 今天到期的任务
