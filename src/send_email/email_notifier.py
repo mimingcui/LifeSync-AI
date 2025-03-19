@@ -1,44 +1,50 @@
-import requests
 import re
-from datetime import datetime
 import pytz
-from config import MAILGUN_API_KEY, MAILGUN_DOMAIN
+import requests
+from datetime import datetime
+from config import MAILGUN_API_KEY, MAILGUN_DOMAIN  # Make sure these are properly configured
 
-def send_email(body, EMAIL_RECEIVER, EMAIL_TITLE, timeoffset):
-    print("Sending email...")
+def send_email(body, email_receiver, email_title, timeoffset):
+    """Send email through Mailgun API with proper validation and error handling"""
+    print("Attempting to send email...")
+    
     try:
-        # 使用正则表达式清理body中的Markdown代码块标记
-        cleaned_body = re.sub(r'```(?:html)?', '', body)  # 删除```和```html
+        # Validate required parameters
+        if not all([email_receiver, email_title, MAILGUN_API_KEY, MAILGUN_DOMAIN]):
+            raise ValueError("Missing required email parameters or Mailgun credentials")
 
-        # 获取当前 UTC 时间
+        # Clean email body
+        cleaned_body = re.sub(r'```(?:html)?', '', body)
+
+        # Calculate local time
         utc_now = datetime.utcnow().replace(tzinfo=pytz.utc)
-        
-        # 根据时区偏移量创建时区并转换时间
         timezone_str = f'Etc/GMT{"+" if timeoffset < 0 else "-"}{abs(timeoffset)}'
         local_timezone = pytz.timezone(timezone_str)
         local_now = utc_now.astimezone(local_timezone)
         custom_date = local_now.strftime('%Y-%m-%d')
 
-        # 配置邮件参数
+        # Prepare email data
         data = {
             "from": f"LifeSync-AI <mailgun@{MAILGUN_DOMAIN}>",
-            "to": [EMAIL_RECEIVER],
-            "subject": f"{EMAIL_TITLE} {custom_date}",
+            "to": [email_receiver.strip()],  # Ensure email is properly formatted
+            "subject": f"{email_title} {custom_date}",
             "html": cleaned_body
         }
 
-        # 发送邮件请求到 Mailgun API
+        # Send request to Mailgun
         response = requests.post(
             f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
             auth=("api", MAILGUN_API_KEY),
             data=data
         )
-        
+
+        # Handle response
         if response.status_code == 200:
-            print("Email sent successfully!")
+            print(f"✅ Email successfully sent to {email_receiver}")
         else:
-            print(f"Failed to send email. Status code: {response.status_code}, Response: {response.text}")
+            print(f"⚠️ Mailgun API Error: {response.status_code}")
+            print(f"Response: {response.text}")
 
     except Exception as e:
-        print("An error occurred while sending the email:")
-        print(e)
+        print(f"🔥 Critical email error: {str(e)}")
+        raise  # Re-raise exception to handle in calling code
