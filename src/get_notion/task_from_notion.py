@@ -10,16 +10,16 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
     try:
         # Debug database schema
         db = notion.databases.retrieve(USER_DATABASE_ID)
-        print("Task Database Properties:", json.dumps(db['properties'], indent=2))
+        print("Task Database Properties:", json.dumps(db.get('properties', {}), indent=2))
 
         # Timezone handling
         user_tz = pytz.FixedOffset(timezone_offset * 60)
         utc = pytz.utc
-        
+
         # Date range calculation
         today_start = datetime.combine(custom_date, datetime.min.time()).replace(tzinfo=user_tz)
         today_end = today_start + timedelta(days=1)
-        
+
         # Convert to UTC for Notion query
         today_start_utc = today_start.astimezone(utc)
         today_end_utc = today_end.astimezone(utc)
@@ -37,39 +37,43 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
         )
 
         tasks = {"today_due": [], "in_progress": [], "future": [], "completed": []}
-        
+
         for row in results.get("results", []):
             try:
-                date_prop = row['properties'].get('Date', {}).get('date', {})
+                # Extract date property
+                date_prop = row.get('properties', {}).get('Date', {}).get('date', {})
                 if not date_prop:
+                    print("Skipping task: No date property")
                     continue
 
-                # Date parsing with UTC conversion
+                # Parse start and end dates with UTC conversion
                 start_utc = datetime.fromisoformat(date_prop['start'].replace('Z', '+00:00')).astimezone(utc)
                 end_utc = datetime.fromisoformat(date_prop['end'].replace('Z', '+00:00')).astimezone(utc) if date_prop.get('end') else None
-                
+
                 # Convert to user timezone
                 start_local = start_utc.astimezone(user_tz)
                 end_local = end_utc.astimezone(user_tz) if end_utc else None
 
-                # Safer property access
-                urgency = (row['properties']
-                    .get('Urgency', {})
-                    .get('select', {})
-                    .get('name', 'NA'))
-                
-                description = (row['properties']
-                    .get('Description', {})
-                    .get('rich_text', [{}])[0]
-                    .get('text', {})
-                    .get('content', '')).replace('\n', ' ').strip()
+                # Extract other properties safely
+                urgency = row.get('properties', {}).get('Urgency', {}).get('select', {}).get('name', 'NA')
+
+                description = (
+                    row.get('properties', {}).get('Description', {}).get('rich_text', [{}])[0]
+                    .get('text', {}).get('content', '')
+                ).replace('\n', ' ').strip()
+
+                # Fix: Correct task name extraction
+                name = ''.join(
+                    t.get('text', {}).get('content', '') 
+                    for t in row.get('properties', {}).get('Name', {}).get('title', [])
+                ).strip()
 
                 task = {
-                    'Name': ''.join([t['text']['content'] for t in row['properties']['Name']['title']),
+                    'Name': name or "Untitled",
                     'Start': start_local.strftime('%Y-%m-%d %H:%M'),
                     'End': end_local.strftime('%Y-%m-%d %H:%M') if end_local else 'N/A',
                     'Urgency': urgency,
-                    'Completed': row['properties'].get('Complete', {}).get('checkbox', False)
+                    'Completed': row.get('properties', {}).get('Complete', {}).get('checkbox', False)
                 }
 
                 # Classification logic
@@ -85,7 +89,7 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                         tasks["future"].append(task)
 
             except Exception as e:
-                print(f"Skipping task: {str(e)}")
+                print(f"Skipping task due to error: {str(e)}")
                 continue
 
         return tasks
