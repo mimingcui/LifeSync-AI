@@ -61,7 +61,7 @@ def fetch_event_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                     end_datetime = datetime.fromisoformat(end_date).astimezone(tz) if end_date else (start_datetime + timedelta(hours=1) if start_datetime else None)
 
                     event = {
-                        'Name': ''.join([part['text']['content'] for part in row['properties']['Name']['title']) if row['properties']['Name']['title'] else 'NA',
+                        'Name': ''.join([part['text']['content'] for part in row['properties']['Name']['title']]) if row['properties']['Name']['title'] else 'NA',
                         'Description': (
                             row['properties'].get('Description', {})
                             .get('rich_text', [{}])[0]
@@ -80,6 +80,7 @@ def fetch_event_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                         'End Time': end_datetime.strftime('%H:%M') if end_datetime else 'NA',
                         'Status': 'Completed' if end_datetime and end_datetime < current_time else 'In Progress'
                     }
+
 
                     # 更精确的时间分类
                     if include_completed and end_datetime and today_start <= end_datetime < today_end:
