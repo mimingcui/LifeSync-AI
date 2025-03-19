@@ -45,7 +45,7 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
             database_id=USER_DATABASE_ID,
             filter={
                 "property": "Date",  # MUST match Notion's property name exactly
-                "date": {"on_or_after": start_date.isoformat()}
+                "date": {"on_or_after": today_start.isoformat()}
             }
         )
         
@@ -71,8 +71,13 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                 start_datetime = datetime.fromisoformat(date_info['start']).astimezone(tz) if date_info.get('start') else None
 
                 # 获取紧急程度
-                urgency_level = row['properties']['紧急程度']['select']['name'] if '紧急程度' in row['properties'] and row['properties']['紧急程度']['select'] else 'NA'
-
+                urgency_level = (
+                    row['properties']
+                    .get('Urgency', {})  
+                    .get('select', {})
+                    .get('name', 'NA')
+                )
+                
                 # 提取Description
                 description = ''
                 if 'rich_text' in row['properties']['Description'] and row['properties']['Description']['rich_text']:
