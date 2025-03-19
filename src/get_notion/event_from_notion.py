@@ -69,10 +69,11 @@ def fetch_event_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                             .get('content', 'NA')
                         ),
                         'Location': (
-                            row['properties'].get('Location', {})
+                            row.get('properties', {})
+                            .get('Location', {})
                             .get('rich_text', [{}])[0]
                             .get('text', {})
-                            .get('content', 'Quebec City')  # Default to your location
+                            .get('content', 'No location')
                         ),
                         'Start Date': start_datetime.strftime('%Y-%m-%d') if start_datetime else 'NA',
                         'Start Time': start_datetime.strftime('%H:%M') if start_datetime else 'NA',
