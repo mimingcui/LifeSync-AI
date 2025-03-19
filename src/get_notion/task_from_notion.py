@@ -43,7 +43,10 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
 
         results = notion.databases.query(
             database_id=USER_DATABASE_ID,
-            filter=filter_conditions
+            filter={
+                "property": "Date",  # MUST match Notion's property name exactly
+                "date": {"on_or_after": start_date.isoformat()}
+            }
         )
         
         # 初始化任务列表
