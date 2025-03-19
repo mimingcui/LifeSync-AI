@@ -49,6 +49,9 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
             }
         )
         
+        db = notion.databases.retrieve(USER_DATABASE_ID)
+        print("Task Database Properties:", json.dumps(db['properties'], indent=2))
+
         # 初始化任务列表
         tasks = {
             "today_due": [],      # 今天到期的任务
@@ -77,7 +80,7 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                     .get('select', {})
                     .get('name', 'NA')
                 )
-                
+
                 # 提取Description
                 description = ''
                 if 'rich_text' in row['properties']['Description'] and row['properties']['Description']['rich_text']:
