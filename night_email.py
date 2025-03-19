@@ -138,11 +138,14 @@ for user_id in user_data:
             "日程晚报",
             "night"
         )
+        
+        receiver = user_data[user_id]["EMAIL_RECEIVER"]
+        print(f"Email recipient: {receiver}")  # Debug
         send_email(
-            email_body,
-            user_info["EMAIL_RECEIVER"],
-            user_info["EMAIL_TITLE"],
-            time_zone_offset
+            body=email_body,
+            to_email=user_data[user_id]["EMAIL_RECEIVER"],  
+            subject=user_data[user_id]["EMAIL_TITLE"],
+            time_zone_offset=time_zone_offset
         )
         print(f"✅ Email sent to {user_info['EMAIL_RECEIVER']}")
 
