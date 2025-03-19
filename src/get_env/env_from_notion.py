@@ -7,10 +7,10 @@ def get_user_env_vars():
     notion = Client(auth=ENV_NOTION_TOKEN)
     response = notion.databases.query(ENV_DATABASE_ID)
 
-    # DEBUG: Print raw Notion response
-    print("\n⚠️ DEBUG - RAW NOTION RESPONSE:")
-    import json
-    print(json.dumps(response, indent=2, default=str))
+    ## DEBUG: Print raw Notion response
+    #print("\n⚠️ DEBUG - RAW NOTION RESPONSE:")
+    #import json
+    #print(json.dumps(response, indent=2, default=str))
 
     # 存储用户环境变量的字典
     user_env_vars = {}
