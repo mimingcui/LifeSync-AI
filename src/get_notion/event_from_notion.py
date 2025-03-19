@@ -3,131 +3,72 @@ from datetime import datetime, timedelta
 import pytz
 
 def fetch_event_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, timezone_offset=8, include_completed=False):
-    """
-    从Notion获取事件数据，并根据日期精确分类
-    
-    Parameters:
-    - custom_date: 指定日期 (datetime.date)
-    - USER_NOTION_TOKEN: Notion API Token
-    - USER_DATABASE_ID: 数据库ID
-    - timezone_offset: 时区偏移量（小时）
-    - include_completed: 是否包含已完成事件
-    """
     notion = Client(auth=USER_NOTION_TOKEN)
     print("\nFetching events from Notion...\n")
     
     try:
-        # 创建时区对象
-        tz = pytz.FixedOffset(timezone_offset * 60)  # 转换为分钟
+        user_tz = pytz.FixedOffset(timezone_offset * 60)
+        utc = pytz.utc
         
-        # 设置关键时间点
-        today = custom_date  # 这是一个 date 对象
-        tomorrow = today + timedelta(days=1)  # 这也是一个 date 对象
-        future_date = today + timedelta(days=30)  # 这也是一个 date 对象
-        current_time = datetime.now(tz)
-
-        # 获取今天的开始和结束时间点
-        today_start = datetime.combine(today, datetime.min.time()).replace(tzinfo=tz)
-        today_end = datetime.combine(tomorrow, datetime.min.time()).replace(tzinfo=tz)
-        
-        # 初始化事件字典
-        events = {
-            "in_progress": [],     # 今天正在进行的事件
-            "tomorrow": [],        # 明天的事件
-            "upcoming": [],        # 未来（后天及以后）的事件
-            "completed": []        # 已完成的事件（仅限今天）
-        }
+        # Date range setup
+        today_start = datetime.combine(custom_date, datetime.min.time()).replace(tzinfo=user_tz)
+        today_end = today_start + timedelta(days=1)
+        future_date = custom_date + timedelta(days=30)
+        current_time = datetime.now(user_tz)
 
         results = notion.databases.query(
             database_id=USER_DATABASE_ID,
             filter={
                 "property": "Date",
-                "date": {
-                    "is_not_empty": True
-                }
+                "date": {"is_not_empty": True}
             }
         )
 
-        for row in results["results"]:
-            if 'Date' in row['properties'] and row['properties']['Date']['date']:
-                date_info = row['properties']['Date']['date']
-                
-                try:
-                    # 解析开始和结束时间
-                    start_date = date_info.get('start')
-                    end_date = date_info.get('end')
-                    
-                    start_datetime = datetime.fromisoformat(start_date).astimezone(tz) if start_date else None
-                    end_datetime = datetime.fromisoformat(end_date).astimezone(tz) if end_date else (start_datetime + timedelta(hours=1) if start_datetime else None)
+        events = {"in_progress": [], "tomorrow": [], "upcoming": [], "completed": []}
 
-                    event = {
-                        'Name': ''.join([part['text']['content'] for part in row['properties']['Name']['title']]) if row['properties']['Name']['title'] else 'NA',
-                        'Description': (
-                            row['properties'].get('Description', {})
-                            .get('rich_text', [{}])[0]
-                            .get('text', {})
-                            .get('content', 'NA')
-                        ),
-                        'Location': (
-                            row.get('properties', {})
-                            .get('Location', {})
-                            .get('rich_text', [{}])[0]
-                            .get('text', {})
-                            .get('content', 'No location')
-                        ),
-                        'Start Date': start_datetime.strftime('%Y-%m-%d') if start_datetime else 'NA',
-                        'Start Time': start_datetime.strftime('%H:%M') if start_datetime else 'NA',
-                        'End Date': end_datetime.strftime('%Y-%m-%d') if end_datetime else 'NA',
-                        'End Time': end_datetime.strftime('%H:%M') if end_datetime else 'NA',
-                        'Status': 'Completed' if end_datetime and end_datetime < current_time else 'In Progress'
-                    }
-
-
-                    # 更精确的时间分类
-                    if include_completed and end_datetime and today_start <= end_datetime < today_end:
-                        # 今天已完成的事件
-                        events["completed"].append(event)
-                        continue
-
-                    if start_datetime:
-                        event_date = start_datetime.date()  # 获取日期部分
-                        
-                        if event_date == today:
-                            # 今天的事件
-                            if not end_datetime or end_datetime >= current_time:
-                                events["in_progress"].append(event)
-                        elif event_date == tomorrow:  # 直接比较date对象
-                            # 明天的事件
-                            events["tomorrow"].append(event)
-                        elif tomorrow < event_date <= future_date:  # 直接比较date对象
-                            # 后天及以后的事件
-                            events["upcoming"].append(event)
-
-                except Exception as e:
-                    print(f"Error processing event: {row.get('properties', {}).get('Name', {}).get('title', [{'text': {'content': 'Unknown'}}])[0]['text']['content']}")
-                    print(f"Error details: {str(e)}")
+        for row in results.get("results", []):
+            try:
+                date_prop = row['properties'].get('Date', {}).get('date', {})
+                if not date_prop:
                     continue
 
-        print("Events fetched successfully with date categorization.")
-        
-        # 打印调试信息
-        print(f"\nToday's date: {today}")
-        print(f"Tomorrow's date: {tomorrow}")
-        for key in events:
-            if events[key]:
-                print(f"\n{key} events:")
-                for event in events[key]:
-                    print(f"- {event['Name']} ({event['Start Date']})")
-            else:
-                print(f"\nNo {key} events found.")
+                # UTC-based parsing
+                start_utc = datetime.fromisoformat(date_prop['start'].replace('Z', '+00:00')).astimezone(utc)
+                end_utc = datetime.fromisoformat(date_prop['end'].replace('Z', '+00:00')).astimezone(utc) if date_prop.get('end') else None
+                
+                # Local time conversion
+                start_local = start_utc.astimezone(user_tz)
+                end_local = end_utc.astimezone(user_tz) if end_utc else None
+
+                event = {
+                    'Name': ''.join([t['text']['content'] for t in row['properties']['Name'].get('title', [])]),
+                    'Start': start_local.strftime('%Y-%m-%d %H:%M'),
+                    'End': end_local.strftime('%Y-%m-%d %H:%M') if end_local else 'N/A',
+                    'Location': (row['properties']
+                        .get('Location', {})
+                        .get('rich_text', [{}])[0]
+                        .get('text', {})
+                        .get('content', 'No location')),
+                    'Status': 'Completed' if end_local and end_local < current_time else 'In Progress'
+                }
+
+                # Date comparisons using local dates
+                event_date = start_local.date()
+                if event_date == custom_date:
+                    events["in_progress"].append(event)
+                elif event_date == custom_date + timedelta(days=1):
+                    events["tomorrow"].append(event)
+                elif custom_date + timedelta(days=2) <= event_date <= future_date:
+                    events["upcoming"].append(event)
+                elif include_completed and end_local and end_local.date() == custom_date:
+                    events["completed"].append(event)
+
+            except Exception as e:
+                print(f"Skipping event: {str(e)}")
+                continue
 
         return events
-        
+
     except Exception as e:
-        print(f"Error fetching data from Notion: {e}")
-        return {
-            "in_progress": [],
-            "tomorrow": [],
-            "upcoming": [],
-            "completed": []
-        }
+        print(f"Event Error: {str(e)}")
+        return {k: [] for k in ["in_progress", "tomorrow", "upcoming", "completed"]}
