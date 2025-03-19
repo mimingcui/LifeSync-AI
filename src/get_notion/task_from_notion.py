@@ -1,6 +1,7 @@
 from notion_client import Client
 from datetime import datetime, timedelta
 import pytz
+import json
 
 def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, timezone_offset=8, include_completed=False):
     """
