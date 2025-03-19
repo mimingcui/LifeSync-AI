@@ -139,15 +139,20 @@ for user_id in user_data:
             "night"
         )
         
-        receiver = user_data[user_id]["EMAIL_RECEIVER"]
-        print(f"Email recipient: {receiver}")  # Debug
-        send_email(
-            body=email_body,
-            to_email=user_data[user_id]["EMAIL_RECEIVER"],  
-            subject=user_data[user_id]["EMAIL_TITLE"],
-            time_zone_offset=time_zone_offset
-        )
-        print(f"✅ Email sent to {user_info['EMAIL_RECEIVER']}")
+        # In your email sending section
+        try:
+            send_email(
+                body=email_body,
+                email_receiver=user_data[user_id]["EMAIL_RECEIVER"],
+                email_title=user_data[user_id]["EMAIL_TITLE"],
+                timeoffset=time_zone_offset
+            )
+        except KeyError as e:
+            print(f"⚠️ Missing email configuration for user {user_id}: {str(e)}")
+        except ValueError as e:
+            print(f"⚠️ Invalid email configuration: {str(e)}")
+        except Exception as e:
+            print(f"🔥 Unexpected error sending email: {str(e)}")
 
     except Exception as e:
         print(f"🔥 Critical error processing {user_id}: {str(e)}")
