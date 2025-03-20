@@ -4,7 +4,7 @@ from src.send_email.format_email import format_email
 from src.get_notion.task_from_notion import fetch_tasks_from_notion
 from src.send_email.email_notifier import send_email
 from src.ai_operations.ai_morning_advice import email_advice_with_ai
-from src.get_weather import get_weather_forecast  # Fixed typo 'wheather' to 'weather'
+from src.get_weather import get_weather_forecast  
 from src.get_env.env_from_notion import get_user_env_vars
 from src.get_notion.event_from_notion import fetch_event_from_notion
 
