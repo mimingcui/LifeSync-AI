@@ -1,3 +1,11 @@
+# Relative imports for local package
+from .src.send_email.format_email import format_email
+from .src.get_notion.task_from_notion import fetch_tasks_from_notion
+from .src.send_email.email_notifier import send_email
+from .src.ai_operations.ai_morning_advice import email_advice_with_ai
+from .src.get_weather import get_weather_forecast
+from .src.get_env.env_from_notion import get_user_env_vars
+
 def safe_get(dictionary, *keys, default=None):
     """Safely retrieve nested values from dictionaries/lists"""
     current = dictionary
@@ -7,17 +15,6 @@ def safe_get(dictionary, *keys, default=None):
         except (KeyError, TypeError, IndexError):
             return default
     return current
-
-
-import re
-import pytz
-from datetime import datetime
-from src.send_email.format_email import format_email
-from src.get_notion.task_from_notion import fetch_tasks_from_notion
-from src.send_email.email_notifier import send_email
-from src.ai_operations.ai_morning_advice import email_advice_with_ai
-from src.get_weather import get_weather_forecast
-from src.get_env.env_from_notion import get_user_env_vars
 
 
 def validate_user_config(user_data):
