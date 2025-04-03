@@ -1,4 +1,14 @@
-# morning_email.py (verified working)
+def safe_get(dictionary, *keys, default=None):
+    """Safely retrieve nested values from dictionaries/lists"""
+    current = dictionary
+    for key in keys:
+        try:
+            current = current[key]
+        except (KeyError, TypeError, IndexError):
+            return default
+    return current
+
+
 import re
 import pytz
 from datetime import datetime
@@ -9,15 +19,6 @@ from src.ai_operations.ai_morning_advice import email_advice_with_ai
 from src.get_weather import get_weather_forecast
 from src.get_env.env_from_notion import get_user_env_vars
 
-def safe_get(dictionary, *keys, default=None):
-    """Safely retrieve nested values from dictionaries/lists"""
-    current = dictionary
-    for key in keys:
-        try:
-            current = current[key]
-        except (KeyError, TypeError, IndexError):
-            return default
-    return current
 
 def validate_user_config(user_data):
     """Validate at least one valid user configuration exists"""
