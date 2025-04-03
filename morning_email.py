@@ -15,29 +15,34 @@ def safe_get(dictionary, *keys, default=None):
     return current
 
 # ----- Configuration -----
-def validate_config(user_config: Dict) -> None:
-    """Validate required configuration keys"""
+def validate_config(user_data):
+    """Check for required keys in each user's config"""
     required_keys = {
-        "USER_NOTION_TOKEN", "USER_DATABASE_ID",
-        "GPT_VERSION", "PRESENT_LOCATION", "USER_NAME",
-        "USER_CAREER", "SCHEDULE_PROMPT", "TIME_ZONE",
-        "EMAIL_RECEIVER", "EMAIL_TITLE"
+        'USER_ID', 'PRESENT_LOCATION', 'USER_NOTION_TOKEN',
+        'USER_DATABASE_ID', 'GPT_VERSION', 'TIME_ZONE',
+        'EMAIL_RECEIVER', 'EMAIL_TITLE', 'USER_CAREER',
+        'SCHEDULE_PROMPT', 'USER_NAME' 
     }
     
-    missing = required_keys - user_config.keys()
-    if missing:
-        raise ValueError(f"Missing required config keys: {', '.join(missing)}")
-
+    for user_id, config in user_data.items():
+        missing = required_keys - set(config.keys())
+        if missing:
+            print(f"⛔ User {user_id} missing keys: {missing}")
+            continue  # Skip invalid users
+        
 # ----- Data Fetching -----
-def fetch_user_data(config: Dict) -> Dict:
-    """Fetch user data from Notion with error wrapping"""
+def fetch_user_data() -> dict:
     try:
         from src.get_env.env_from_notion import get_user_env_vars
-        return get_user_env_vars()
-    except ImportError as e:
-        raise RuntimeError(f"Import error: {str(e)}") from e
+        data = get_user_env_vars()
+        print("\n=== RAW NOTION DATA ===")
+        print(f"Type: {type(data)}")
+        print(f"Content: {data}")
+        print("=====================")
+        return data
     except Exception as e:
         raise RuntimeError(f"Data fetch failed: {str(e)}") from e
+
 
 def fetch_weather_data(location: str, tz_offset: int) -> Dict:
     """Get weather data with error handling"""
@@ -108,6 +113,7 @@ def main() -> None:
         # Fetch and validate configurations
         print("\n🔧 Loading configurations...")
         user_data = fetch_user_data()
+        print(f"Loaded users: {list(user_data.keys())}")  # Add this line
         validate_config(user_data)
 
         for user_id, config in user_data.items():
@@ -157,7 +163,9 @@ def main() -> None:
             except Exception as e:
                 print(f"❌ Error processing user {user_id}: {str(e)}")
                 continue
-
+        
+        print(f"Loaded {len(user_data)} user configurations")
+        print("User IDs:", user_data.keys())
         print("\n🎉 Morning digest process completed successfully")
 
     except Exception as e:
