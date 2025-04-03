@@ -5,10 +5,10 @@ def get_user_env_vars():
     """Fetch user configs from Notion with robust error handling"""
     try:
         notion = Client(auth=os.environ.get("NOTION_TOKEN"))
-        db_id = os.environ.get("USER_ENV_DATABASE_ID")
+        db_id = os.environ.get("ENV_DATABASE_ID")
         
         if not db_id:
-            raise ValueError("🚨 USER_ENV_DATABASE_ID environment variable missing")
+            raise ValueError("🚨 ENV_DATABASE_ID environment variable missing")
 
         print(f"🔄 Querying Notion database: {db_id}")
         response = notion.databases.query(db_id)
@@ -62,4 +62,4 @@ def get_user_env_vars():
 
     except Exception as e:
         print(f"🔥 CRITICAL FAILURE: {str(e)}")
-        return {}
+        return {}f
