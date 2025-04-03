@@ -55,12 +55,10 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
                 end_local = end_utc.astimezone(user_tz) if end_utc else None
 
                 # Extract other properties safely
-                urgency = row.get('properties', {}).get('Urgency', {}).get('select', {}).get('name', 'NA')
-
-                description = (
-                    row.get('properties', {}).get('Description', {}).get('rich_text', [{}])[0]
-                    .get('text', {}).get('content', '')
-                ).replace('\n', ' ').strip()
+                priority = row.get('properties', {}).get('Priority', {}).get('select', {}).get('name', 'NA')
+                task_type = row.get('properties', {}).get('Type', {}).get('select', {}).get('name', 'Task')
+                remaining_days = row.get('properties', {}).get('剩余天数', {}).get('number', None)
+                eta = row.get('properties', {}).get('# ETA', {}).get('checkbox', False)
 
                 # Fix: Correct task name extraction
                 name = ''.join(
@@ -70,9 +68,12 @@ def fetch_tasks_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, ti
 
                 task = {
                     'Name': name or "Untitled",
+                    'Type': task_type,
                     'Start': start_local.strftime('%Y-%m-%d %H:%M'),
                     'End': end_local.strftime('%Y-%m-%d %H:%M') if end_local else 'N/A',
-                    'Urgency': urgency,
+                    'Priority': priority,
+                    'RemainingDays': remaining_days,
+                    'ETA': eta,
                     'Completed': row.get('properties', {}).get('Complete', {}).get('checkbox', False)
                 }
 

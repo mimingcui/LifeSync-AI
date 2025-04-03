@@ -1,74 +1,55 @@
-from notion_client import Client
-from datetime import datetime, timedelta
-import pytz
-
-def fetch_event_from_notion(custom_date, USER_NOTION_TOKEN, USER_DATABASE_ID, timezone_offset=8, include_completed=False):
-    notion = Client(auth=USER_NOTION_TOKEN)
-    print("\nFetching events from Notion...\n")
-    
+# Modify property access to handle empty lists
+def get_user_env_vars():
     try:
-        user_tz = pytz.FixedOffset(timezone_offset * 60)
-        utc = pytz.utc
+        notion = Client(auth=os.environ.get("NOTION_TOKEN"))
+        db_id = os.environ.get("USER_ENV_DATABASE_ID")
         
-        # Date range setup
-        today_start = datetime.combine(custom_date, datetime.min.time()).replace(tzinfo=user_tz)
-        today_end = today_start + timedelta(days=1)
-        future_date = custom_date + timedelta(days=30)
-        current_time = datetime.now(user_tz)
+        if not db_id:
+            raise ValueError("USER_ENV_DATABASE_ID environment variable not set")
 
-        results = notion.databases.query(
-            database_id=USER_DATABASE_ID,
-            filter={
-                "property": "Date",
-                "date": {"is_not_empty": True}
-            }
-        )
+        results = notion.databases.query(db_id)
+        
+        if not results.get("results"):
+            raise ValueError("No entries found in user config database")
 
-        events = {"in_progress": [], "tomorrow": [], "upcoming": [], "completed": []}
-
-        for row in results.get("results", []):
+        user_data = {}
+        for page in results["results"]:
             try:
-                date_prop = row['properties'].get('Date', {}).get('date', {})
-                if not date_prop:
-                    continue
-
-                # UTC-based parsing
-                start_utc = datetime.fromisoformat(date_prop['start'].replace('Z', '+00:00')).astimezone(utc)
-                end_utc = datetime.fromisoformat(date_prop['end'].replace('Z', '+00:00')).astimezone(utc) if date_prop.get('end') else None
+                props = page.get('properties', {})
                 
-                # Local time conversion
-                start_local = start_utc.astimezone(user_tz)
-                end_local = end_utc.astimezone(user_tz) if end_utc else None
+                # Safe USER_ID extraction
+                user_id = "".join(
+                    t["text"]["content"] 
+                    for t in props.get("USER_ID", {}).get("title", [])
+                ) or "MISSING_USER_ID"
 
-                event = {
-                    'Name': ''.join([t['text']['content'] for t in row['properties']['Name'].get('title', [])]),
-                    'Start': start_local.strftime('%Y-%m-%d %H:%M'),
-                    'End': end_local.strftime('%Y-%m-%d %H:%M') if end_local else 'N/A',
-                    'Location': (row['properties']
-                        .get('Location', {})
-                        .get('rich_text', [{}])[0]
-                        .get('text', {})
-                        .get('content', 'No location')),
-                    'Status': 'Completed' if end_local and end_local < current_time else 'In Progress'
+                # Safe property access with empty list handling
+                def get_rich_text(content):
+                    rich_text = props.get(content, {}).get("rich_text", [])
+                    return rich_text[0]["text"]["content"] if rich_text else ""
+
+                user_config = {
+                    "USER_NOTION_TOKEN": get_rich_text("USER_NOTION_TOKEN"),
+                    "USER_DATABASE_ID": get_rich_text("USER_DATABASE_ID"),
+                    "TIME_ZONE": get_rich_text("TIME_ZONE"),
+                    "PRESENT_LOCATION": get_rich_text("PRESENT_LOCATION"),
+                    "USER_NAME": get_rich_text("USER_NAME"),
+                    "USER_CAREER": get_rich_text("USER_CAREER"),
+                    "EMAIL_RECEIVER": get_rich_text("EMAIL_RECEIVER"),
+                    "EMAIL_TITLE": get_rich_text("EMAIL_TITLE"),
+                    "GPT_VERSION": get_rich_text("GPT_VERSION"),
+                    "SCHEDULE_PROMPT": get_rich_text("SCHEDULE_PROMPT")
                 }
 
-                # Date comparisons using local dates
-                event_date = start_local.date()
-                if event_date == custom_date:
-                    events["in_progress"].append(event)
-                elif event_date == custom_date + timedelta(days=1):
-                    events["tomorrow"].append(event)
-                elif custom_date + timedelta(days=2) <= event_date <= future_date:
-                    events["upcoming"].append(event)
-                elif include_completed and end_local and end_local.date() == custom_date:
-                    events["completed"].append(event)
-
+                if all(user_config.values()):  # Only add complete configs
+                    user_data[user_id] = user_config
+                    
             except Exception as e:
-                print(f"Skipping event: {str(e)}")
+                print(f"Skipping invalid entry: {str(e)}")
                 continue
 
-        return events
+        return user_data
 
     except Exception as e:
-        print(f"Event Error: {str(e)}")
-        return {k: [] for k in ["in_progress", "tomorrow", "upcoming", "completed"]}
+        print(f"Environment Error: {str(e)}")
+        return {}
