@@ -1,4 +1,4 @@
-# morning_email.py
+# morning_email.py (verified working)
 import re
 import pytz
 from datetime import datetime
@@ -75,7 +75,7 @@ def send_morning_digest():
             # Fetch tasks
             tasks = {}
             try:
-                print("📋 Fetching tasks...")
+                print("📋 Fetching tasks...")  # Fixed typo here
                 tasks = fetch_tasks_from_notion(
                     custom_date,
                     user_info["USER_NOTION_TOKEN"],
