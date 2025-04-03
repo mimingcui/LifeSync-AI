@@ -40,7 +40,7 @@ def get_user_env_vars():
                 
                 # 3. Validate critical fields
                 config = {
-                    "USER_ENV_NOTION_TOKEN": safe_rich_text("USER_ENV_NOTION_TOKEN"),
+                    "USER_NOTION_TOKEN": safe_rich_text("USER_NOTION_TOKEN"),
                     "USER_DATABASE_ID": safe_rich_text("USER_DATABASE_ID"),
                     "TIME_ZONE": safe_rich_text("TIME_ZONE"),
                     "PRESENT_LOCATION": safe_rich_text("PRESENT_LOCATION"),
