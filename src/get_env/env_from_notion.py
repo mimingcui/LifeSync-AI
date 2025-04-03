@@ -4,7 +4,7 @@ import os
 def get_user_env_vars():
     """Fetch user configs from Notion with robust error handling"""
     try:
-        notion = Client(auth=os.environ.get("NOTION_TOKEN"))
+        notion = Client(auth=os.environ.get("ENV_NOTION_TOKEN"))
         db_id = os.environ.get("ENV_DATABASE_ID")
         
         if not db_id:
@@ -40,7 +40,7 @@ def get_user_env_vars():
                 
                 # 3. Validate critical fields
                 config = {
-                    "USER_NOTION_TOKEN": safe_rich_text("USER_NOTION_TOKEN"),
+                    "USER_ENV_NOTION_TOKEN": safe_rich_text("USER_ENV_NOTION_TOKEN"),
                     "USER_DATABASE_ID": safe_rich_text("USER_DATABASE_ID"),
                     "TIME_ZONE": safe_rich_text("TIME_ZONE"),
                     "PRESENT_LOCATION": safe_rich_text("PRESENT_LOCATION"),
