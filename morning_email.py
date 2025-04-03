@@ -76,7 +76,7 @@ def send_morning_digest():
             # Fetch tasks
             tasks = {}
             try:
-                print("📋 Fetching tasks...")  # Fixed typo here
+                print("📋 Fetching tasks...")
                 tasks = fetch_tasks_from_notion(
                     custom_date,
                     user_info["USER_NOTION_TOKEN"],
@@ -138,7 +138,7 @@ def send_morning_digest():
             print(f"⚠️ Error processing {user_id}: {str(e)}")
             continue
 
-    print("\nMorning digest process completed")
+    print("\n✅ Morning digest process completed")
 
 if __name__ == "__main__":
     send_morning_digest()
